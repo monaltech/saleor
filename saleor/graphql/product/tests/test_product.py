@@ -5551,24 +5551,24 @@ def test_update_product_with_empty_input_collections(
 ):
     # given
     query = """
-mutation updateProduct($productId: ID!, $input: ProductInput!) {
-  productUpdate(id: $productId, input: $input) {
-    productErrors {
-      field
-      message
-      code
+    mutation updateProduct($productId: ID!, $input: ProductInput!) {
+      productUpdate(id: $productId, input: $input) {
+        productErrors {
+          field
+          message
+          code
+        }
+        product {
+          id
+        }
+      }
     }
-    product {
-      id
-    }
-  }
-}
 
     """
     product_id = graphene.Node.to_global_id("Product", product.pk)
     variables = {
         "productId": product_id,
-        "input": {"collections": ""},
+        "input": {"collections": [""]},
     }
     # when
     response = staff_api_client.post_graphql(
