@@ -1,7 +1,7 @@
 ### Build and install packages
 FROM python:3.8 as build-python
 
-RUN apt-get -y update \
+RUN apt-get -y update -o Acquire::CompressionTypes::Order::=gz \
   && apt-get install -y gettext \
   # Cleanup apt cache
   && apt-get clean \
@@ -17,7 +17,7 @@ FROM python:3.8-slim
 
 RUN groupadd -r saleor && useradd -r -g saleor saleor
 
-RUN apt-get update \
+RUN apt-get update -o Acquire::CompressionTypes::Order::=gz \
   && apt-get install -y \
   libxml2 \
   libssl1.1 \
