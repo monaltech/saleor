@@ -1160,6 +1160,7 @@ class ProductVariantInput(graphene.InputObjectType):
     )
     cost_price = PositiveDecimal(description="Cost price of the variant.")
     price = PositiveDecimal(description="Price of the particular variant.")
+    whole_sale_price = PositiveDecimal(description="Wholesale Price of the particular variant.")
     sku = graphene.String(description="Stock keeping unit.")
     track_inventory = graphene.Boolean(
         description=(
@@ -1271,7 +1272,14 @@ class ProductVariantCreate(ModelMutation):
                 error.code = ProductErrorCode.INVALID.value
                 raise ValidationError({"price": error})
             cleaned_input["price_amount"] = price
-
+        whole_sale_price = cleaned_input.get("whole_sale_price")
+        if "whole_sale_price" in cleaned_input:
+            try:
+                validate_price_precision(whole_sale_price, instance.currency)
+            except ValidationError as error:
+                error.code = ProductErrorCode.INVALID.value
+                raise ValidationError({"whole_sale_price": error})
+            cleaned_input["whole_sale_price_amount"] = whole_sale_price
         stocks = cleaned_input.get("stocks")
         if stocks:
             cls.check_for_duplicates_in_stocks(stocks)

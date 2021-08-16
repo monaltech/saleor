@@ -423,6 +423,13 @@ class ProductVariant(SortableModel, ModelWithMetadata):
         null=True,
     )
     cost_price = MoneyField(amount_field="cost_price_amount", currency_field="currency")
+    whole_sale_price_amount = models.DecimalField(
+        max_digits=settings.DEFAULT_MAX_DIGITS,
+        decimal_places=settings.DEFAULT_DECIMAL_PLACES,
+        blank=True,
+        null=True
+    )
+    whole_sale_price = MoneyField(amount_field="whole_sale_price_amount", currency_field="currency")
     weight = MeasurementField(
         measurement=Weight, unit_choices=WeightUnits.CHOICES, blank=True, null=True
     )

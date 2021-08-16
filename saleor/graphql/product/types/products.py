@@ -230,6 +230,7 @@ class ProductVariant(CountableDjangoObjectType):
         description="List of attributes assigned to this variant.",
     )
     cost_price = graphene.Field(Money, description="Cost price of the variant.")
+    whole_sale_price = graphene.Field(Money, description="Whole Sale price of the variant.")
     margin = graphene.Int(description="Gross margin percentage value.")
     quantity_ordered = graphene.Int(description="Total quantity ordered.")
     revenue = graphene.Field(
@@ -351,6 +352,7 @@ class ProductVariant(CountableDjangoObjectType):
                         country=context.country,
                         local_currency=context.currency,
                         plugins=context.plugins,
+                        is_wholesaler=context.user.is_wholesaler
                     )
                     return VariantPricingInfo(**asdict(availability))
 

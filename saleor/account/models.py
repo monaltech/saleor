@@ -142,6 +142,7 @@ class User(PermissionsMixin, ModelWithMetadata, AbstractBaseUser):
     )
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
+    is_wholesaler = models.BooleanField(default=False)
     note = models.TextField(null=True, blank=True)
     date_joined = models.DateTimeField(default=timezone.now, editable=False)
     default_shipping_address = models.ForeignKey(

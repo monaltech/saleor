@@ -4108,6 +4108,7 @@ type ProductVariant implements Node & ObjectWithMetadata {
   isAvailable: Boolean @deprecated(reason: "Use the stock field instead. This field will be removed after 2020-07-31.")
   attributes: [SelectedAttribute!]!
   costPrice: Money
+  wholeSalePrice: Money
   margin: Int
   quantityOrdered: Int
   revenue(period: ReportingPeriod): TaxedMoney

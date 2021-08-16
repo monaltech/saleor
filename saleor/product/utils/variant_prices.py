@@ -17,7 +17,12 @@ def _get_product_minimal_variant_price(product, discounts) -> Optional[Money]:
         if minimal_variant_price is None:
             minimal_variant_price = variant_price
         else:
-            minimal_variant_price = min(minimal_variant_price, variant_price)
+            try:
+                minimal_variant_price = min(minimal_variant_price, variant_price)
+            except ValueError as err:
+                print(err)
+                print(f"Min Var Price: {minimal_variant_price.__dict__}, Var price: {variant_price.__dict__}")
+                minimal_variant_price = minimal_variant_price
     return minimal_variant_price
 
 

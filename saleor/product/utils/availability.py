@@ -112,8 +112,13 @@ def get_variant_price(
     variant: ProductVariant,
     product: Product,
     collections: Iterable[Collection],
-    discounts: Iterable[DiscountInfo]
+    discounts: Iterable[DiscountInfo],
+    is_wholesaler=False
 ):
+    if is_wholesaler:
+        price = variant.whole_sale_price
+    else:
+        price = variant.price
     return calculate_discounted_price(
         product=product,
         price=variant.price,
@@ -127,7 +132,8 @@ def get_product_price_range(
     product: Product,
     variants: Iterable[ProductVariant],
     collections: Iterable[Collection],
-    discounts: Iterable[DiscountInfo]
+    discounts: Iterable[DiscountInfo],
+    is_wholesaler = False
 ) -> Optional[MoneyRange]:
     with opentracing.global_tracer().start_active_span("get_product_price_range"):
         if variants:
@@ -137,6 +143,7 @@ def get_product_price_range(
                     product=product,
                     collections=collections,
                     discounts=discounts,
+                    is_wholesaler=is_wholesaler
                 )
                 for variant in variants
             ]
@@ -154,6 +161,7 @@ def get_product_availability(
     country: Optional[str] = None,
     local_currency: Optional[str] = None,
     plugins: Optional["PluginsManager"] = None,
+    is_wholesaler=False
 ) -> ProductAvailability:
     with opentracing.global_tracer().start_active_span("get_product_availability"):
         if not plugins:
@@ -165,6 +173,7 @@ def get_product_availability(
             variants=variants,
             collections=collections,
             discounts=discounts,
+            is_wholesaler=is_wholesaler
         )
         if discounted_net_range is not None:
             discounted = TaxedMoneyRange(
@@ -178,7 +187,7 @@ def get_product_availability(
 
         undiscounted = None
         undiscounted_net_range = get_product_price_range(
-            product=product, variants=variants, collections=collections, discounts=[]
+            product=product, variants=variants, collections=collections, discounts=[], is_wholesaler=is_wholesaler
         )
         if undiscounted_net_range is not None:
             undiscounted = TaxedMoneyRange(
@@ -219,6 +228,7 @@ def get_variant_availability(
     country: Optional[str] = None,
     local_currency: Optional[str] = None,
     plugins: Optional["PluginsManager"] = None,
+    is_wholesaler=False
 ) -> VariantAvailability:
     with opentracing.global_tracer().start_active_span("get_variant_availability"):
         if not plugins:
@@ -230,13 +240,14 @@ def get_variant_availability(
                 product=product,
                 collections=collections,
                 discounts=discounts,
+                is_wholesaler=is_wholesaler
             ),
             country,
         )
         undiscounted = plugins.apply_taxes_to_product(
             product,
             get_variant_price(
-                variant=variant, product=product, collections=collections, discounts=[]
+                variant=variant, product=product, collections=collections, discounts=[], is_wholesaler=is_wholesaler
             ),
             country,
         )
