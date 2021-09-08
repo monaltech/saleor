@@ -340,7 +340,9 @@ class ProductVariant(CountableDjangoObjectType):
         context = info.context
         product = ProductByIdLoader(context).load(root.product_id)
         collections = CollectionsByProductIdLoader(context).load(root.product_id)
-
+        is_wholesaler = False
+        if context.user.is_authenticated:
+            is_wholesaler = context.user.is_wholesaler
         def calculate_pricing_info(discounts):
             def calculate_pricing_with_product(product):
                 def calculate_pricing_with_collections(collections):
@@ -352,7 +354,7 @@ class ProductVariant(CountableDjangoObjectType):
                         country=context.country,
                         local_currency=context.currency,
                         plugins=context.plugins,
-                        is_wholesaler=context.user.is_wholesaler
+                        is_wholesaler=is_wholesaler
                     )
                     return VariantPricingInfo(**asdict(availability))
 
@@ -565,6 +567,9 @@ class Product(CountableDjangoObjectType):
         context = info.context
         variants = ProductVariantsByProductIdLoader(context).load(root.id)
         collections = CollectionsByProductIdLoader(context).load(root.id)
+        is_wholesaler = False
+        if context.user.is_authenticated:
+            is_wholesaler = context.user.is_wholesaler
 
         def calculate_pricing_info(discounts):
             def calculate_pricing_with_variants(variants):
@@ -577,6 +582,7 @@ class Product(CountableDjangoObjectType):
                         country=context.country,
                         local_currency=context.currency,
                         plugins=context.plugins,
+                        is_wholesaler=is_wholesaler
                     )
                     return ProductPricingInfo(**asdict(availability))
 

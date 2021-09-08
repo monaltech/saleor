@@ -121,7 +121,7 @@ def get_variant_price(
         price = variant.price
     return calculate_discounted_price(
         product=product,
-        price=variant.price,
+        price=price,
         collections=collections,
         discounts=discounts,
     )

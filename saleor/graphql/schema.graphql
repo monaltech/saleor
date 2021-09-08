@@ -5175,6 +5175,7 @@ type User implements Node & ObjectWithMetadata {
   lastName: String!
   isStaff: Boolean!
   isActive: Boolean!
+  isWholesaler: Boolean!
   note: String
   dateJoined: DateTime!
   defaultShippingAddress: Address

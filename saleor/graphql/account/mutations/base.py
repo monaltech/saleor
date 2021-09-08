@@ -332,6 +332,7 @@ class UserInput(graphene.InputObjectType):
     last_name = graphene.String(description="Family name.")
     email = graphene.String(description="The unique email address of the user.")
     is_active = graphene.Boolean(required=False, description="User account is active.")
+    is_wholesaler = graphene.Boolean(required=False, description="User is whole saler.")
     note = graphene.String(description="A note about the user.")
 
 

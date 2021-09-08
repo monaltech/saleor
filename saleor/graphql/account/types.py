@@ -241,6 +241,7 @@ class User(CountableDjangoObjectType):
             "first_name",
             "id",
             "is_active",
+            "is_wholesaler",
             "is_staff",
             "last_login",
             "last_name",
