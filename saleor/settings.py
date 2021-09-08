@@ -585,12 +585,7 @@ JWT_TTL_REQUEST_EMAIL_CHANGE = timedelta(
     seconds=parse(os.environ.get("JWT_TTL_REQUEST_EMAIL_CHANGE", "1 hour")),
 )
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3500",
-    "http://localhost:3000",
-    "https://dashboard.bishwa.net",
-    "https://shop.bishwa.net",
-]
+CORS_ALLOWED_ORIGINS = get_list(os.environ.get("CORS_ALLOWED_ORIGINS","https://dashboard.bishwa.net,https://shop.bishwa.net"))
 
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_METHODS = [
