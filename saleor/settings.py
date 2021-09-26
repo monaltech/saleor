@@ -585,7 +585,22 @@ JWT_TTL_REQUEST_EMAIL_CHANGE = timedelta(
     seconds=parse(os.environ.get("JWT_TTL_REQUEST_EMAIL_CHANGE", "1 hour")),
 )
 
-CORS_ALLOWED_ORIGINS = get_list(os.environ.get("CORS_ALLOWED_ORIGINS", "127.0.0.1,localhost"))
+CORS_ALLOWED_ORIGINS = os.environ.get("CORS_ALLOWED_ORIGINS")
+
+if not CORS_ALLOWED_ORIGINS:
+    CORS_ALLOWED_ORIGINS = [f'https://{i}' for i in ALLOWED_CLIENT_HOSTS if i not in ['127.0.0.1', 'localhost']]
+else:
+    CORS_ALLOWED_ORIGINS = [f'https://{i}' for i in get_list(CORS_ALLOWED_ORIGINS)]
+
+if DEBUG:
+    CORS_ALLOWED_ORIGINS = [
+        'http://127.0.0.1:3000',
+        'http://localhost:3000',
+        'http://127.0.0.1:3500',
+        'http://localhost:3500',
+        *CORS_ALLOWED_ORIGINS,
+    ]
+    CORS_ALLOW_ALL_ORIGINS = True
 
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_METHODS = [
