@@ -86,6 +86,9 @@ type AccountRegister {
 input AccountRegisterInput {
   email: String!
   password: String!
+  firstName: String
+  lastName: String
+  phoneNumber: String
   redirectUrl: String
 }
 

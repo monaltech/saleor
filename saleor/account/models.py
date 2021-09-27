@@ -140,6 +140,7 @@ class User(PermissionsMixin, ModelWithMetadata, AbstractBaseUser):
     addresses = models.ManyToManyField(
         Address, blank=True, related_name="user_addresses"
     )
+    phone_number = models.CharField(max_length=255, null=True, blank=True)
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     is_wholesaler = models.BooleanField(default=False)
