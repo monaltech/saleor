@@ -147,7 +147,8 @@ def get_product_price_range(
                 )
                 for variant in variants
             ]
-            return MoneyRange(min(prices), max(prices))
+            if min(prices) is not None and max(prices) is not None:
+                return MoneyRange(min(prices), max(prices))
 
         return None
 
