@@ -520,6 +520,7 @@ PLUGINS = [
     "saleor.payment.gateways.braintree.plugin.BraintreeGatewayPlugin",
     "saleor.payment.gateways.razorpay.plugin.RazorpayGatewayPlugin",
     "saleor.payment.gateways.adyen.plugin.AdyenGatewayPlugin",
+    "saleor.payment.gateways.cybersource.plugin.CyberSourceGatewayPlugin",
     "saleor.plugins.invoicing.plugin.InvoicingPlugin",
 ]
 
@@ -600,12 +601,14 @@ if DEBUG:
         'http://localhost:3500',
         *CORS_ALLOWED_ORIGINS,
     ]
+    #FIXME: Not working.
     CORS_ALLOW_ALL_ORIGINS = True
 
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_METHODS = [
     'DELETE',
     'GET',
+    #'HEAD',
     'OPTIONS',
     'PATCH',
     'POST',
