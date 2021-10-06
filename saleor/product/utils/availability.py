@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Iterable, Optional, Tuple, Union
 
 import opentracing
 from django.conf import settings
-from prices import MoneyRange, TaxedMoney, TaxedMoneyRange
+from prices import Money, MoneyRange, TaxedMoney, TaxedMoneyRange
 
 from saleor.product.models import Collection, Product, ProductVariant
 
@@ -149,6 +149,8 @@ def get_product_price_range(
             ]
             if min(prices) is not None and max(prices) is not None:
                 return MoneyRange(min(prices), max(prices))
+            else:
+                return MoneyRange(Money(0, settings.DEFAULT_CURRENCY), Money(0, settings.DEFAULT_CURRENCY))
 
         return None
 
