@@ -118,6 +118,19 @@ def process_payment(
     payment_information: PaymentData, config: GatewayConfig
 ) -> GatewayResponse:
     """Process the payment."""
+
+    response = authorize(payment_information, config)
+
+    if config.auto_capture:
+        response = capture(payment_information, config)
+
+    return response
+
+
+def _process_payment(
+    payment_information: PaymentData, config: GatewayConfig
+) -> GatewayResponse:
+    """Process the payment."""
     token = payment_information.token
 
     # Process payment normally if payment token is valid

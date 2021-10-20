@@ -38,7 +38,7 @@ class DummyGatewayPlugin(BasePlugin):
     DEFAULT_ACTIVE = True
     DEFAULT_CONFIGURATION = [
         {"name": "Store customers card", "value": False},
-        {"name": "Automatic payment capture", "value": True},
+        {"name": "Automatic payment capture", "value": False},
         {"name": "Supported currencies", "value": settings.DEFAULT_CURRENCY},
     ]
     CONFIG_STRUCTURE = {
