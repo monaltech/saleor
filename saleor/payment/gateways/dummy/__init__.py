@@ -31,8 +31,8 @@ def authorize(
             last_4="1234",
             exp_year=2222,
             exp_month=12,
-            brand="dummy_visa",
-            name="Holder name",
+            brand="cash_on_delivery",
+            name="Holder Name",
             type="card",
         ),
     )
