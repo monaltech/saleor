@@ -7,6 +7,7 @@ import uuid
 from datetime import datetime, timezone
 
 from base64 import b64encode
+from decimal import Decimal
 
 # Payment Gateway API endpoint URLs:
 LIVE_URL = 'https://secureacceptance.cybersource.com/pay'
@@ -92,6 +93,18 @@ EXTRA_FIELDS = [
 ]
 
 
+class State:
+    CANCEL = 'cancel'
+    CONFIRM = 'confirm'
+    CREATE = 'create'
+    STATES = {
+        CANCEL,
+        CONFIRM,
+        CREATE,
+    }
+    DEFAULT = CREATE
+
+
 class CyberSource:
 
     def __init__(self, config, auto_capture=True):
@@ -117,7 +130,7 @@ class CyberSource:
             timestamp = datetime.now(timezone.utc).strftime(TS_FORMAT)
             result['signed_date_time'] = timestamp
         if 'transaction_uuid' not in result:
-            result['transaction_uuid'] = str(uuid.uuid4().hex)
+            result['transaction_uuid'] = uuid.uuid4().hex
         return result
 
     def _create_result(self, data):
@@ -138,14 +151,13 @@ class CyberSource:
     def _format_amount(self, result):
         amount = result['amount']
         try:
-            #FIXME: Convert to number.
-            if isinstance(amount, str):
-                amount = float(amount)
+            types = (Decimal, float, int)
+            if isinstance(amount, str) or not \
+                    isinstance(amount, types):
+                # amount = float(amount)
+                amount = Decimal(amount)
             amount = AMOUNT_FORMAT % amount
-        except ValueError as e:
-            #FIXME: Raise custom exception.
-            raise e
-        except TypeError as e:
+        except (TypeError, ValueError) as e:
             #FIXME: Raise custom exception.
             raise e
         result['amount'] = amount
@@ -157,10 +169,15 @@ class CyberSource:
         return TEST_URL
 
     @staticmethod
-    def html(data, glue='\n'):
+    def html(data, glue='\n', sort=False):
+        if sort:
+            return glue.join(
+                '<input type="hidden" name="%s" value="%s" />' \
+                    % (i, data[i]) for i in sorted(data.keys())
+            )
         return glue.join(
             f'<input type="hidden" name="{k}" value="{v}" />' \
-            for k, v in data.items()
+                for k, v in data.items()
         )
 
     def process(self, data, html=False, glue='\n'):
@@ -217,7 +234,7 @@ class CyberSource:
             raise e
 
 
-# Generate html test form.
+# Generate test html form.
 if __name__ == '__main__':
     import sys
     if len(sys.argv) > 1:
@@ -251,6 +268,7 @@ if __name__ == '__main__':
                 </tr>
             '''.format(field=f, value=result[f]) \
                     for f in sorted(result.keys())]
+    glue = '\n' + ' ' * 20
     html = '''
         <html>
           <head>
@@ -259,10 +277,10 @@ if __name__ == '__main__':
           <body>
             <h1>CyberSource Payment Gateway Test</h1>
             <p>
-              <strong>Endpoint URL:</strong>: {endpoint}
+              <strong>Endpoint URL</strong>: {endpoint}
             </p>
             <form action="{endpoint}" method="POST">
-              <table border="1" cellspacing="0" cellpadding="4">
+              <table border="1" cellpadding="4" cellspacing="0">
                 <tr>
                   <th>Field</th>
                   <th>Value</th>
@@ -270,7 +288,8 @@ if __name__ == '__main__':
                 {rows}
                 <tr>
                   <td colspan="2" style="text-align: center;">
-                    {html}<input type="submit" value=" Pay Now " />
+                    {html}
+                    <input type="submit" value=" Pay Now " />
                   </td>
                 </tr>
               </table>
@@ -282,7 +301,7 @@ if __name__ == '__main__':
         </html>
     '''.format(
             endpoint=cs.endpoint,
-            tosign=cs.tosign(result),
             rows=''.join(rows),
-            html=cs.html(result))
+            html=cs.html(result, glue, True),
+            tosign=cs.tosign(result))
     print(html)
