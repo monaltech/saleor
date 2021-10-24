@@ -181,6 +181,7 @@ class CyberSourceGatewayPlugin(BasePlugin):
             action_required_data={
                 'action': self._cs.endpoint,
                 'inputs': self._cs.process(data),
+                'txn_id': token,
             },
             kind=TransactionKind.ACTION_TO_CONFIRM,
             amount=payment_information.amount,
