@@ -72,6 +72,7 @@ enum AccountErrorCode {
 input AccountInput {
   firstName: String
   lastName: String
+  phoneNumber: String
   defaultBillingAddress: AddressInput
   defaultShippingAddress: AddressInput
 }
