@@ -16,7 +16,8 @@ from . import (
     void,
 )
 
-GATEWAY_NAME = "Dummy"
+GATEWAY_NAME = "Dummy"              # Plugin name (for backend)
+DISPLAY_NAME = "Cash on Delivery"   # Display name for frontend
 
 if TYPE_CHECKING:
     from ...interface import GatewayResponse, PaymentData, TokenConfig
@@ -64,7 +65,7 @@ class DummyGatewayPlugin(BasePlugin):
         super().__init__(*args, **kwargs)
         configuration = {item["name"]: item["value"] for item in self.configuration}
         self.config = GatewayConfig(
-            gateway_name=GATEWAY_NAME,
+            gateway_name=DISPLAY_NAME,
             auto_capture=configuration["Automatic payment capture"],
             supported_currencies=configuration["Supported currencies"],
             connection_params={},

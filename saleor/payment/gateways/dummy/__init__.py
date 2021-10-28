@@ -19,6 +19,21 @@ def authorize(
     error = None
     if not success:
         error = "Unable to authorize transaction"
+    token = payment_information.token
+    if token == ChargeStatus.PENDING:
+        token = get_client_token()
+        return GatewayResponse(
+            is_success=success,
+            action_required=True,
+            action_required_data={
+                'txn_id': token,
+            },
+            kind=TransactionKind.ACTION_TO_CONFIRM,
+            amount=payment_information.amount,
+            currency=payment_information.currency,
+            transaction_id=token,
+            error=error,
+        )
     return GatewayResponse(
         is_success=success,
         action_required=False,
@@ -31,8 +46,8 @@ def authorize(
             last_4="1234",
             exp_year=2222,
             exp_month=12,
-            brand="dummy_visa",
-            name="Holder name",
+            brand="cash_on_delivery",
+            name="Holder Name",
             type="card",
         ),
     )
