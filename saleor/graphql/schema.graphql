@@ -5176,6 +5176,7 @@ type User implements Node & ObjectWithMetadata {
   id: ID!
   lastLogin: DateTime
   email: String!
+  phoneNumber: String
   firstName: String!
   lastName: String!
   isStaff: Boolean!
