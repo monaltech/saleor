@@ -9,6 +9,12 @@ from datetime import datetime, timezone
 from base64 import b64encode
 from decimal import Decimal
 
+
+import logging
+
+_logger = logging.getLogger(__name__)
+
+
 # Payment Gateway API endpoint URLs:
 LIVE_URL = 'https://secureacceptance.cybersource.com/pay'
 TEST_URL = 'https://testsecureacceptance.cybersource.com/pay'
@@ -34,6 +40,8 @@ TRANSACTION_TYPES = [
     f'{CAPTURE},{CREATE_TOKEN}',    # Not Used (implemented) for now.
     f'{CAPTURE},{UPDATE_TOKEN}',    # Not Used (implemented) for now.
 ]
+
+DEFAULT_TOKEN = 'create'    # Initial payment token.
 
 SIGNED_FIELD_SEP = ','  # Data (to-be-signed) field seperator.
 SIGNED_VALUE_SEP = '='  # Data (to-be-signed) value seperator.
@@ -93,22 +101,141 @@ EXTRA_FIELDS = [
 ]
 
 
-class State:
-    CANCEL = 'cancel'
-    CONFIRM = 'confirm'
-    CREATE = 'create'
-    STATES = {
-        CANCEL,
-        CONFIRM,
-        CREATE,
+E_AMOUNT = 'Amount format or type is invalid.'
+E_CONFIG = 'Missing configuration parameters.'
+
+E_SIGNATURE = 'Signature does not match.'
+
+E_NO_SIGN_FIELD = 'No signature field in payment data.'
+E_NO_SIGN_VALUE = 'No signature value in payment data.'
+
+E_CHECK_FIELDS = 'Required fields check failed.'
+E_MISSING_FIELD = 'Field "%s" is missing in payment data.'
+E_REQ_FIELDS = 'Required field(s) are missing.'
+
+E_NOKEY = 'Missing field(s) in payment data.'
+E_VALUE = 'Invalid value(s) in payment data.'
+
+
+class Status:
+
+    ACCEPT = 'ACCEPT'
+    REVIEW = 'REVIEW'
+    DECLINE = 'DECLINE'
+    CANCEL = 'CANCEL'
+    ERROR = 'ERROR'
+
+    LABELS = {
+        ACCEPT: 'Accepted',
+        REVIEW: 'In Review',
+        DECLINE: 'Declined',
+        CANCEL: 'Cancelled',
+        ERROR: 'Error!',
     }
-    DEFAULT = CREATE
+
+    MESSAGES = {
+        ACCEPT: 'Payment accepted',
+        REVIEW: 'Payment is in review',
+        DECLINE: 'Payment was declined',
+        CANCEL: 'Payment is cancelled',
+        ERROR: 'Payment processing error',
+    }
+
+    RETURN = {
+        ACCEPT,
+        REVIEW,
+    }
+
+    CONFIRM = RETURN
+    SUCCESS = RETURN
+
+    FAILED = {
+        CANCEL,
+        DECLINE,
+        ERROR,
+    }
+
+    @classmethod
+    def label(cls, name, default=None):
+        if default is None:
+            default = name
+        return cls.LABELS.get(name, default)
+
+    @classmethod
+    def message(cls, name, default=''):
+        return cls.MESSAGES.get(name, default)
+
+
+class Response:
+
+    def __init__(self, data):
+        self._code = data.get('reason_code', 0)
+        self._text = data.get('decision', None)
+        if self._code is None:
+            self._code = 0
+        self._data = data
+
+    def __getattr__(self, name):
+        try:
+            return self._data[name]
+        except KeyError:
+            pass
+        c = self.__class__.__name__
+        e = f"'{c}' object has no attribute '{name}'"
+        raise AttributeError(e)
+
+    def __str__(self):
+        return f'{self._text} ({self._code}) {self.message}'
+
+    @property
+    def code(self):
+        return self._code
+
+    @property
+    def data(self):
+        return self._data.copy()
+
+    @property
+    def message(self):
+        msg = self._data.get('message', '')
+        if not msg:
+            return Status.message(self._text)
+        return msg
+
+    @property
+    def status(self):
+        return self._text
+
+
+class CyberSourceError(Exception):
+
+    def __init__(*args, code=0):
+        super().__init__(*args)
+        self.code = code
+
+    @property
+    def message(self):
+        return str(self)
+
+
+class SignatureError(CyberSourceError):
+
+    def __init__(self, code=99):
+        super().__init__(*args, code=code)
+
+
+class ValidationError(CyberSourceError):
+
+    def __init__(*args, code=50, source=None):
+        super().__init__(*args, code=code)
+        self.source = source
 
 
 class CyberSource:
 
     def __init__(self, config, auto_capture=True):
         try:
+            self.merchant_id = config['merchant_id']
             self.profile_id = config['profile_id']
             self.access_key = config['access_key']
             self.secret_key = config['secret_key']
@@ -116,8 +243,8 @@ class CyberSource:
             self.locale = config.get('locale', LOCALE)
             self.auto_capture = auto_capture
         except KeyError as e:
-            #FIXME: Raise custom exception.
-            raise e
+            _logger.exception(f'CyberSource: {E_CONFIG}')
+            raise ValidationError(E_CONFIG, source=e)
 
     def _add_missing(self, result):
         if 'currency' not in result:
@@ -130,7 +257,8 @@ class CyberSource:
             timestamp = datetime.now(timezone.utc).strftime(TS_FORMAT)
             result['signed_date_time'] = timestamp
         if 'transaction_uuid' not in result:
-            result['transaction_uuid'] = uuid.uuid4().hex
+            #result['transaction_uuid'] = uuid.uuid4().hex
+            result['transaction_uuid'] = str(uuid.uuid4())
         return result
 
     def _create_result(self, data):
@@ -139,28 +267,28 @@ class CyberSource:
         result['access_key'] = self.access_key
         result['transaction_type'] = CAPTURE \
                 if self.auto_capture else AUTH
-        try:
-            if AMOUNT_FORMAT is not None:
-                self._format_amount(result)
-            self._add_missing(result)
-        except KeyError as e:
-            #FIXME: Raise custom exception.
-            raise e
+        if AMOUNT_FORMAT is not None:
+            self._format_amount(result)
+        self._add_missing(result)
         return result
 
     def _format_amount(self, result):
-        amount = result['amount']
         try:
+            amount = result['amount']
             types = (Decimal, float, int)
             if isinstance(amount, str) or not \
                     isinstance(amount, types):
                 # amount = float(amount)
                 amount = Decimal(amount)
             amount = AMOUNT_FORMAT % amount
+            result['amount'] = amount
         except (TypeError, ValueError) as e:
-            #FIXME: Raise custom exception.
-            raise e
-        result['amount'] = amount
+            _logger.exception(f'FormatAmount: {E_AMOUNT}')
+            raise ValidationError(E_AMOUNT, source=e)
+        except KeyError as e:
+            msg = E_MISSING_FIELD % 'amount'
+            _logger.exception(f'FormatAmount: {msg}')
+            raise ValidationError(msg, source=e)
 
     @property
     def endpoint(self):
@@ -195,11 +323,10 @@ class CyberSource:
                 if html:
                     return self.html(result, glue)
                 return result
-            #FIXME: Raise custom exception.
-            raise Exception('Required fields check failed.')
-        else:
-            #FIXME: Raise custom exception.
-            raise Exception('Required fields are missing.')
+            _logger.warning(f'CyberSource.process: {E_CHECK_FIELDS}')
+            raise ValidationError(E_CHECK_FIELDS)
+        _logger.warning('CyberSource.process: {E_REQ_FIELDS}')
+        raise ValidationError(E_REQ_FIELDS)
 
     def sign(self, data, fields=None,
             field_sep=SIGNED_FIELD_SEP,
@@ -223,15 +350,23 @@ class CyberSource:
             else:
                 vals = [str(data[f]) for f in fields]
             return field_sep.join(vals)
-        except TypeError as e:
-            #FIXME: Raise custom exception.
-            raise e
-        except ValueError as e:
-            #FIXME: Raise custom exception.
-            raise e
+        except (TypeError, ValueError) as e:
+            _logger.exception(f'CyberSource.tosign: {E_VALUE}')
+            raise ValidationError(E_VALUE, source=e)
         except KeyError as e:
-            #FIXME: Raise custom exception.
-            raise e
+            _logger.exception(f'CyberSource.tosign: {E_NOKEY}')
+            raise ValidationError(E_NOKEY, source=e)
+
+    def validate(self, data):
+        try:
+            signature = data['signature']
+        except KeyError:
+            raise ValidationError(E_NO_SIGN_FIELD)
+        if not signature:
+            raise ValidationError(E_NO_SIGN_VALUE)
+        if signature != self.sign(data):
+            raise SignatureError(E_SIGNATURE)
+        return Response(data)
 
 
 # Generate test html form.
@@ -246,17 +381,18 @@ if __name__ == '__main__':
         'profile_id': 'F1A9A61D-44FE-489D-A167-925D0A669D26',
         'access_key': '028c5892be8233baba7baa30837c46e7',
         'secret_key': '99aae74b5abf45a494406cd9411aa93f231f1947d8be474ebdbc389fe6a0327017c2560ee6064e92b72922b63670941d88d81072416242f4931d52daf66da518131041cc6be04160b95cd9dde6bcfb99ce9cb11446054876aa8c2ab687067299ae456f34e3a84539bc0a884ac00a80c80ca762ac48f847a087550daa13da9ed7',
+        'merchant_id': '100710070000046',
     }
     data = {
         'amount': amount,
-        #'bill_to_forename': "Bibek",
-        #'bill_to_surname': "Shrestha",
-        #'bill_to_phone': "9841234567",
-        #'bill_to_address_line1': "Lainchaur",
-        #'bill_to_address_city': "Kathmandu",
-        #'bill_to_address_postal_code': "44600",
-        #'bill_to_address_state': "Bagmati",
-        #'bill_to_address_country': "NP",
+        'bill_to_forename': "Bibek",
+        'bill_to_surname': "Shrestha",
+        'bill_to_phone': "977-9841234567",
+        'bill_to_address_line1': "Lainchaur",
+        'bill_to_address_city': "Kathmandu",
+        'bill_to_address_postal_code': "44600",
+        'bill_to_address_state': "Bagmati",
+        'bill_to_address_country': "NP",
         'reference_number': refnum,
     }
     cs = CyberSource(config)
