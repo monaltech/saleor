@@ -5,13 +5,12 @@ from typing import Optional
 from django.contrib.auth.models import AnonymousUser
 from django.core.exceptions import ValidationError
 
-from .plugins import GATEWAY_ID
-
 from ....checkout.models import Checkout
 from ....checkout.complete_checkout import complete_checkout
 from ....discount.utils import fetch_active_discounts
 from ....payment.models import Payment, Transaction
 
+from . import GATEWAY_ID
 from ... import ChargeStatus
 
 

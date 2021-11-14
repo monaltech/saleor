@@ -4,6 +4,9 @@ from ... import ChargeStatus, TransactionKind
 from ...interface import GatewayConfig, GatewayResponse, PaymentData, PaymentMethodInfo
 
 
+GATEWAY_ID = 'mirumee.payments.cybersource'
+
+
 def cybersource_success():
     return True
 

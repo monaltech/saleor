@@ -7,16 +7,13 @@ from ....payment.models import (
     Transaction,
 )
 
-from ... import PaymentError, TransactionKind
-
 from ...interface import GatewayResponse
+from ... import PaymentError, TransactionKind
 
 from ...utils import (
     create_transaction,
     gateway_postprocess,
 )
-
-from . import is_client_token
 
 from .csapi import (
     #CyberSource,
@@ -27,7 +24,7 @@ from .csapi import (
     ValidationError,
 )
 
-from .plugins import GATEWAY_ID
+from . import GATEWAY_ID, is_client_token
 
 
 PAYMENT_ID = 'req_reference_number'

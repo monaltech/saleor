@@ -8,8 +8,11 @@ from django.utils.http import urlencode
 from saleor.plugins.base_plugin import BasePlugin, ConfigurationTypeField
 
 from ..utils import get_supported_currencies
+from ... import TransactionKind, PaymentError
 
 from . import (
+    GATEWAY_ID,
+    csapi,
     GatewayConfig,
     GatewayResponse,
     #authorize,
@@ -22,22 +25,17 @@ from . import (
     void,
 )
 
-from . import csapi
-from ... import TransactionKind, PaymentError
-from .webhooks import handle_webhook
-
 from .utils import (
-    confirm_payment,
     #get_checkout,
     get_payment,
     make_searchable,
 )
 
+from .webhooks import handle_webhook
+
 from base64 import b64encode
 import json
 
-
-GATEWAY_ID = 'mirumee.payments.cybersource'     # Plugin ID.
 
 GATEWAY_NAME = "CyberSource"        # Plugin name (for backend)
 DISPLAY_NAME = "Credit/Debit Card"  # Display name for frontend
@@ -94,7 +92,7 @@ class CyberSourceGatewayPlugin(BasePlugin):
         "merchant-id": {
             "type": ConfigurationTypeField.STRING,
             "help_text": "Merchant ID of Payment Configuration.",
-            "label": "Profile ID",
+            "label": "Merchant ID",
         },
         "profile-id": {
             "type": ConfigurationTypeField.STRING,
