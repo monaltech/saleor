@@ -12,6 +12,21 @@ def get_client_token(**_):
     return str(uuid.uuid4())
 
 
+def is_client_token(token, strict=False):
+    if token:
+        try:
+            if not isinstance(token, str):
+                token = str(token)
+            if strict:
+                canonical = uuid.UUID(token, version=4)
+                return str(canonical) == token
+            uuid.UUID(token)
+            return True
+        except (TypeError, ValueError):
+            return False
+    return None
+
+
 def authorize(
     payment_information: PaymentData, config: GatewayConfig
 ) -> GatewayResponse:
@@ -118,12 +133,9 @@ def process_payment(
     payment_information: PaymentData, config: GatewayConfig
 ) -> GatewayResponse:
     """Process the payment."""
-
     response = authorize(payment_information, config)
-
     if config.auto_capture:
         response = capture(payment_information, config)
-
     return response
 
 
