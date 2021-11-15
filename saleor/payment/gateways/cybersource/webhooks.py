@@ -24,7 +24,11 @@ from .csapi import (
     ValidationError,
 )
 
-from . import GATEWAY_ID, is_client_token
+from . import (
+    GATEWAY_ID,
+    #get_client_token,
+    is_client_token,
+)
 
 
 PAYMENT_ID = 'req_reference_number'

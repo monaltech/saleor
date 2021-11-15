@@ -26,6 +26,7 @@ from . import (
 )
 
 from .utils import (
+    #create_order,
     #get_checkout,
     get_payment,
     make_searchable,
@@ -82,16 +83,17 @@ class CyberSourceGatewayPlugin(BasePlugin):
         {"name": "is-live", "value": False},
         {"name": "return-url", "value": None},
         {"name": "cancel-url", "value": None},
-        {"name": "locale", "value": csapi.LOCALE},
-        {"name": "Store customers card", "value": False},
+        {"name": "auto-capture", "value": True},
         {"name": "Automatic payment capture", "value": False},
+        {"name": "Store customers card", "value": False},
         {"name": "Supported currencies", "value": csapi.CURRENCY},
+        {"name": "locale", "value": csapi.LOCALE},
     ]
 
     CONFIG_STRUCTURE = {
         "merchant-id": {
             "type": ConfigurationTypeField.STRING,
-            "help_text": "Merchant ID of Payment Configuration.",
+            "help_text": "Merchant ID at the Payment Gateway.",
             "label": "Merchant ID",
         },
         "profile-id": {
@@ -101,12 +103,12 @@ class CyberSourceGatewayPlugin(BasePlugin):
         },
         "access-key": {
             "type": ConfigurationTypeField.STRING,
-            "help_text": "Required for authentication.",
+            "help_text": "Required for authentication with Gateway.",
             "label": "Access Key",
         },
         "secret-key": {
             "type": ConfigurationTypeField.SECRET,
-            "help_text": "Signs the transaction data.",
+            "help_text": "Required for signing the transaction data.",
             "label": "Secret Key",
         },
         "is-live": {
@@ -124,26 +126,30 @@ class CyberSourceGatewayPlugin(BasePlugin):
             "help_text": "Return to this URL if payment canceled.",
             "label": "Cancel URL",
         },
-        "locale": {
-            "type": ConfigurationTypeField.STRING,
-            "help_text": "Client/User locale.",
-            "label": "Locale",
-        },
-        "Store customers card": {
+        "auto-capture": {
             "type": ConfigurationTypeField.BOOLEAN,
-            "help_text": "Determines if Saleor should store cards.",
-            "label": "Store customers card",
+            "help_text": "Automatically capture (transfer) the funds when a payment is made.",
+            "label": "Automatic payment capture",
         },
         "Automatic payment capture": {
             "type": ConfigurationTypeField.BOOLEAN,
-            "help_text": "Determines if Saleor should automaticaly capture payments.",
-            "label": "Automatic payment capture",
+            "help_text": "Payments are marked as captured, keep disabled for manual review.",
+            "label": "Mark payments as captured",
+        },
+        "Store customers card": {
+            "type": ConfigurationTypeField.BOOLEAN,
+            "help_text": "Store credit/debit card information in our database.",
+            "label": "Store customers card",
         },
         "Supported currencies": {
             "type": ConfigurationTypeField.STRING,
-            "help_text": "Determines currencies supported by gateway."
-            " Please enter currency codes separated by a comma.",
+            "help_text": "Determines currencies supported by the Gateway.",
             "label": "Supported currencies",
+        },
+        "locale": {
+            "type": ConfigurationTypeField.STRING,
+            "help_text": "Language for Payment Gateway user interface.",
+            "label": "Locale",
         },
     }
 
@@ -158,6 +164,7 @@ class CyberSourceGatewayPlugin(BasePlugin):
             "is_live": configuration["is-live"],
             "return_url": configuration["return-url"],
             "cancel_url": configuration["cancel-url"],
+            "autp_capture": configuration["auto-capture"],
             "locale": configuration["locale"],
         }
         self.config = GatewayConfig(

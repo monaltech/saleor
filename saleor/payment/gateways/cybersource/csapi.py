@@ -233,15 +233,15 @@ class ValidationError(CyberSourceError):
 
 class CyberSource:
 
-    def __init__(self, config, auto_capture=True):
+    def __init__(self, config):
         try:
             self.merchant_id = config['merchant_id']
             self.profile_id = config['profile_id']
             self.access_key = config['access_key']
             self.secret_key = config['secret_key']
             self.is_live = config.get('is_live', False)
+            self.auto_capture = config.get('auto_capture', True)
             self.locale = config.get('locale', LOCALE)
-            self.auto_capture = auto_capture
         except KeyError as e:
             _logger.exception(f'CyberSource: {E_CONFIG}')
             raise ValidationError(E_CONFIG, source=e)
