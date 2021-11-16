@@ -12,6 +12,8 @@ from ... import TransactionKind, PaymentError
 
 from . import (
     GATEWAY_ID,
+    PAYMENT_ID,
+    TOKEN_NAME,
     csapi,
     GatewayConfig,
     GatewayResponse,
@@ -93,12 +95,12 @@ class CyberSourceGatewayPlugin(BasePlugin):
     CONFIG_STRUCTURE = {
         "merchant-id": {
             "type": ConfigurationTypeField.STRING,
-            "help_text": "Merchant ID at the Payment Gateway.",
+            "help_text": "Merchant ID given by the Payment Gateway.",
             "label": "Merchant ID",
         },
         "profile-id": {
             "type": ConfigurationTypeField.STRING,
-            "help_text": "Profile ID of Payment Configuration.",
+            "help_text": "Profile ID of used Payment Configuration.",
             "label": "Profile ID",
         },
         "access-key": {
@@ -113,17 +115,17 @@ class CyberSourceGatewayPlugin(BasePlugin):
         },
         "is-live": {
             "type": ConfigurationTypeField.BOOLEAN,
-            "help_text": "Run in live mode.",
+            "help_text": "Enable to run in live mode, disable for sandbox/test env.",
             "label": "Live Mode",
         },
         "return-url": {
             "type": ConfigurationTypeField.STRING,
-            "help_text": "Return to this URL after payment.",
+            "help_text": "Customer will return to this URL after payment was done.",
             "label": "Return URL",
         },
         "cancel-url": {
             "type": ConfigurationTypeField.STRING,
-            "help_text": "Return to this URL if payment canceled.",
+            "help_text": "Customer will return to this URL if payment is canceled.",
             "label": "Cancel URL",
         },
         "auto-capture": {
@@ -143,12 +145,12 @@ class CyberSourceGatewayPlugin(BasePlugin):
         },
         "Supported currencies": {
             "type": ConfigurationTypeField.STRING,
-            "help_text": "Determines currencies supported by the Gateway.",
+            "help_text": "Supported currencies by the Payment Gateway, (Default: NPR).",
             "label": "Supported currencies",
         },
         "locale": {
             "type": ConfigurationTypeField.STRING,
-            "help_text": "Language for Payment Gateway user interface.",
+            "help_text": "Language for Payment Gateway UI. (Default: en)",
             "label": "Locale",
         },
     }
@@ -164,7 +166,7 @@ class CyberSourceGatewayPlugin(BasePlugin):
             "is_live": configuration["is-live"],
             "return_url": configuration["return-url"],
             "cancel_url": configuration["cancel-url"],
-            "autp_capture": configuration["auto-capture"],
+            "auto_capture": configuration["auto-capture"],
             "locale": configuration["locale"],
         }
         self.config = GatewayConfig(
@@ -337,11 +339,10 @@ class CyberSourceGatewayPlugin(BasePlugin):
         #return process_payment(payment_information, self._get_gateway_config())
         return self._process_payment(payment_information)
 
-    def _webhook_redirect(self, response, status=None, config=None):
-        if status is None:
-            status = response.status
+    def _webhook_redirect(self, response, result, config=None):
         if config is None:
             config = self._get_gateway_config()
+        status = response.status
         params = config.connection_params
         if status in csapi.Status.RETURN:
             url = params['return_url'] or '/'
@@ -354,7 +355,7 @@ class CyberSourceGatewayPlugin(BasePlugin):
             'label': csapi.Status.label(status),
             'message': response.message,
             'status': status,
-        })))
+            **result})))
         return HttpResponseRedirect(f'{url}?%s' % qs)
 
     def webhook(self, request: WSGIRequest, path: str, previous_value) -> HttpResponse:
@@ -362,22 +363,25 @@ class CyberSourceGatewayPlugin(BasePlugin):
         if notify or path.startswith(WEBHOOK_RETURN):
             try:
                 data = request.POST.copy()
+                result = {
+                    'refno': data.get(PAYMENT_ID),
+                    'token': data.get(TOKEN_NAME),
+                }
                 #config = self._get_gateway_config()
                 #response = handle_webhook(self, data, config)
                 response = handle_webhook(self, data)
                 if notify:
                     return HttpResponse('OK')
-                status = response.status
+                result['order'] = response.get('order_id')
             except PaymentError as e:
                 if notify:
                     return HttpResponse('ERROR')
-                status = csapi.Status.ERROR
                 response = csapi.Response({
-                    'decision': status,
-                    'reason_code': e.code,
+                    'decision': csapi.Status.ERROR,
                     'message': e.message,
+                    'reason_code': e.code,
                 })
-            return self._webhook_redirect(response, status)
+            return self._webhook_redirect(response, result)
         return HttpResponseNotFound()
 
     @require_active_plugin

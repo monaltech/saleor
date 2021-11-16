@@ -187,6 +187,12 @@ class Response:
     def __str__(self):
         return f'{self._text} ({self._code}) {self.message}'
 
+    def add(self, name, value):
+        if name not in self._data:
+            self._data[name] = value
+            return True
+        return False
+
     @property
     def code(self):
         return self._code
@@ -194,6 +200,9 @@ class Response:
     @property
     def data(self):
         return self._data.copy()
+
+    def get(self, name, default=None):
+        return self._data.get(name, default)
 
     @property
     def message(self):
@@ -205,6 +214,11 @@ class Response:
     @property
     def status(self):
         return self._text
+
+    def update(self, data):
+        result = {k: self.add(k, v) \
+                for k, v in data.items()}
+        return result
 
 
 class CyberSourceError(Exception):
@@ -364,6 +378,7 @@ class CyberSource:
             raise ValidationError(E_NO_SIGN_FIELD)
         if not signature:
             raise ValidationError(E_NO_SIGN_VALUE)
+        #TODO: Validate all other required fields.
         if signature != self.sign(data):
             raise SignatureError(E_SIGNATURE)
         return Response(data)

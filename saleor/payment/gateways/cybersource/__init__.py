@@ -4,7 +4,10 @@ from ... import ChargeStatus, TransactionKind
 from ...interface import GatewayConfig, GatewayResponse, PaymentData, PaymentMethodInfo
 
 
-GATEWAY_ID = 'mirumee.payments.cybersource'
+GATEWAY_ID = 'mirumee.payments.cybersource'     # Payment module/plugin ID.
+
+PAYMENT_ID = 'req_reference_number'     # Payment ID field in Gateway response.
+TOKEN_NAME = 'req_transaction_uuid'     # Token UUID field in Gateway response.
 
 
 def cybersource_success():

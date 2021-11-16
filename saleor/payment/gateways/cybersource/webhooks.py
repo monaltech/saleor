@@ -26,13 +26,11 @@ from .csapi import (
 
 from . import (
     GATEWAY_ID,
+    PAYMENT_ID,
+    TOKEN_NAME,
     #get_client_token,
     is_client_token,
 )
-
-
-PAYMENT_ID = 'req_reference_number'
-TOKEN_NAME = 'req_transaction_uuid'
 
 
 L_NOT_FOUND = "Payment not found for reference_number=%s."
@@ -134,23 +132,19 @@ class Handler:
                     kind=None, action_required=None)
         return transaction
 
-    def _create_order(self, transaction,
-            payment=None, response=None):
+    def _create_order(self, payment=None, response=None):
         if payment is None:
             payment = self.payment
         if payment.order:
             return payment.order
-        if response is None:
-            response = self.response
         if payment.checkout:
-            order = create_order(payment,
-                payment.checkout, pd=response
-            )
+            order = create_order(payment, payment.checkout,
+                    pd=response or self.response)
             if not order:
                 _logger.warning(L_ORDER % self.token)
                 raise HandlerError(E_ORDER)
             return order
-        _logger.warning(E_CHECKOUT % self.token)
+        _logger.warning(L_CHECKOUT % self.token)
         raise HandlerError(E_CHECKOUT)
 
     def process(capture=False):
@@ -164,21 +158,39 @@ class Handler:
                 and is_client_token(transaction.token):
             payment.token = transaction.token
             payment.save(update_fields=['token'])
-        self._create_order(transaction, payment, response)
-        return transaction
+        return self._create_order(payment, response)
 
+
+def _confirm_payment(handler, auto_capture):
+    try:
+        order = handler.process(auto_capture)
+        _logger.info('confirm_payment: %s', str(order))
+    except ValidationError as e:
+        _logger.exception(f'confirm_payment: {E_VALIDATION}')
+        raise PaymentError(E_VALIDATION, code=e.code)
+    except CyberSourceError as e:
+        _logger.exception(f'confirm_payment: {E_PROCESSING}')
+        raise PaymentError(E_PROCESSING, code=e.code)
+    except HandlerError as e:
+        _logger.exception('confirm_payment: %s', e)
+        raise PaymentError(str(e))
+    return order
+
+def _validate_payment(cs, data):
+    try:
+        response = cs.validate(data)
+        _logger.info('validate_payment: %s', str(response))
+    except ValidationError as e:
+        _logger.warning('validate_payment: %s', E_BAD_RESP)
+        raise PaymentError(E_BAD_RESP, code=e.code)
+    except SignatureError as e:
+        _logger.warning('validate_payment: %s', E_BAD_SIGN)
+        raise PaymentError(E_BAD_SIGN, code=e.code)
+    return response
 
 @transaction_with_commit_on_errors()
 def handle_webhook(cs, data, *args, **kwargs):
-    try:
-        response = cs.validate(data)
-        _logger.info('handle_webhook: %s', str(response))
-    except ValidationError as e:
-        _logger.warning('handle_webhook: %s', E_BAD_RESP)
-        raise PaymentError(E_BAD_RESP, code=e.code)
-    except SignatureError as e:
-        _logger.warning('handle_webhook: %s', E_BAD_SIGN)
-        raise PaymentError(E_BAD_SIGN, code=e.code)
+    response = _validate_payment(cs, data)
     if response.status in Status.RETURN:
         payment = get_payment(response[PAYMENT_ID])
         if not payment:
@@ -186,17 +198,9 @@ def handle_webhook(cs, data, *args, **kwargs):
             e = E_NOT_FOUND % payment_id
             raise PaymentError(e)
         if payment.to_confirm:
-            try:
-                handler = Handler(payment, response)
-                handler.process(cs.auto_capture)
-            except ValidationError as e:
-                _logger.exception(f'handle_webhook: {E_VALIDATION}')
-                raise PaymentError(E_VALIDATION, code=e.code)
-            except CyberSourceError as e:
-                _logger.exception(f'handle_webhook: {E_PROCESSING}')
-                raise PaymentError(E_PROCESSING, code=e.code)
-            except HandlerError as e:
-                _logger.exception('handle_webhook: %s', e)
-                raise PaymentError(str(e))
+            handler = Handler(payment, response)
+            _confirm_payment(handler, cs.auto_capture)
+        if payment.order:
+            response.add('order_id', payment.order.id)
     return response
 
