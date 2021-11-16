@@ -100,27 +100,27 @@ class CyberSourceGatewayPlugin(BasePlugin):
         },
         "profile-id": {
             "type": ConfigurationTypeField.STRING,
-            "help_text": "Profile ID of used Payment Configuration.",
+            "help_text": "Profile ID of the used Payment Configuration.",
             "label": "Profile ID",
         },
         "access-key": {
             "type": ConfigurationTypeField.STRING,
-            "help_text": "Required for authentication with Gateway.",
+            "help_text": "Required for authentication with the Payment Gateway.",
             "label": "Access Key",
         },
         "secret-key": {
             "type": ConfigurationTypeField.SECRET,
-            "help_text": "Required for signing the transaction data.",
+            "help_text": "Required for signing payment (transaction) data.",
             "label": "Secret Key",
         },
         "is-live": {
             "type": ConfigurationTypeField.BOOLEAN,
-            "help_text": "Enable to run in live mode, disable for sandbox/test env.",
+            "help_text": "Enable to run in live mode, disable for sandbox/test environment.",
             "label": "Live Mode",
         },
         "return-url": {
             "type": ConfigurationTypeField.STRING,
-            "help_text": "Customer will return to this URL after payment was done.",
+            "help_text": "Customer will return to this URL after payment is made.",
             "label": "Return URL",
         },
         "cancel-url": {
@@ -140,17 +140,17 @@ class CyberSourceGatewayPlugin(BasePlugin):
         },
         "Store customers card": {
             "type": ConfigurationTypeField.BOOLEAN,
-            "help_text": "Store credit/debit card information in our database.",
+            "help_text": "Store credit/debit card information in our database. (not recommended)",
             "label": "Store customers card",
         },
         "Supported currencies": {
             "type": ConfigurationTypeField.STRING,
-            "help_text": "Supported currencies by the Payment Gateway, (Default: NPR).",
+            "help_text": "Supported currencies by the Payment Gateway. (Default: NPR)",
             "label": "Supported currencies",
         },
         "locale": {
             "type": ConfigurationTypeField.STRING,
-            "help_text": "Language for Payment Gateway UI. (Default: en)",
+            "help_text": "Prefered language for the Payment Gateway UI. (Default: en)",
             "label": "Locale",
         },
     }

@@ -393,10 +393,12 @@ if __name__ == '__main__':
         amount = 100.0
     refnum = datetime.now().strftime("%Y%m%d%H%M%S")
     config = {
+        'merchant_id': '100710070000046',
         'profile_id': 'F1A9A61D-44FE-489D-A167-925D0A669D26',
         'access_key': '028c5892be8233baba7baa30837c46e7',
         'secret_key': '99aae74b5abf45a494406cd9411aa93f231f1947d8be474ebdbc389fe6a0327017c2560ee6064e92b72922b63670941d88d81072416242f4931d52daf66da518131041cc6be04160b95cd9dde6bcfb99ce9cb11446054876aa8c2ab687067299ae456f34e3a84539bc0a884ac00a80c80ca762ac48f847a087550daa13da9ed7',
-        'merchant_id': '100710070000046',
+        'auto_capture': True,
+        'is_live': False,
     }
     data = {
         'amount': amount,
@@ -456,3 +458,4 @@ if __name__ == '__main__':
             html=cs.html(result, glue, True),
             tosign=cs.tosign(result))
     print(html)
+
