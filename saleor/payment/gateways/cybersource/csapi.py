@@ -69,12 +69,14 @@ SIGNED_FIELDS = {
     'bill_to_forename',
     'bill_to_surname',
     'bill_to_phone',
+    'bill_to_email',
     'bill_to_address_line1',
     'bill_to_address_line2',
     'bill_to_address_city',
     'bill_to_address_postal_code',
     'bill_to_address_state',
     'bill_to_address_country',
+    'merchant_id',
     'payment_method',
 }
 
@@ -82,7 +84,8 @@ ADDED_FIELDS = {
     'access_key',
     'currency',
     'locale',
-    #'payment_method',
+    'merchant_id',
+    'payment_method',
     'profile_id',
     #'signature',
     'signed_date_time',
@@ -265,8 +268,9 @@ class CyberSource:
             result['currency'] = CURRENCY
         if 'locale' not in result:
             result['locale'] = LOCALE
-        #if 'payment_method' not in result:
-        #    result['payment_method'] = PAYMENT_METHOD
+        if 'payment_method' not in result and \
+                'payment_method' in ADDED_FIELDS:
+            result['payment_method'] = PAYMENT_METHOD
         if 'signed_date_time' not in result:
             timestamp = datetime.now(timezone.utc).strftime(TS_FORMAT)
             result['signed_date_time'] = timestamp
@@ -281,6 +285,8 @@ class CyberSource:
         result['access_key'] = self.access_key
         result['transaction_type'] = CAPTURE \
                 if self.auto_capture else AUTH
+        if 'merchant_id' in ADDED_FIELDS:
+            result['merchant_id'] = self.merchant_id
         if AMOUNT_FORMAT is not None:
             self._format_amount(result)
         self._add_missing(result)
@@ -404,6 +410,7 @@ if __name__ == '__main__':
         'amount': amount,
         'bill_to_forename': "Bibek",
         'bill_to_surname': "Shrestha",
+        'bill_to_email': "bibek@example.com",
         'bill_to_phone': "977-9841234567",
         'bill_to_address_line1': "Lainchaur",
         'bill_to_address_city': "Kathmandu",
