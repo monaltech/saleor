@@ -260,7 +260,7 @@ class CyberSourceGatewayPlugin(BasePlugin):
             'currency': payment_information.currency,
             'transaction_id': token,
             'searchable_key': make_searchable(token),
-            'errors': None,
+            'error': None,
             **data}
         return GatewayResponse(**response)
 
