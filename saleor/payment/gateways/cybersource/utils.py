@@ -32,13 +32,13 @@ import logging
 _logger = logging.getLogger(__name__)
 
 
-def build_redirect_url(request, url):
+def build_redirect_url(request, url, add_port=False):
     redirect = request.GET.get('redirect')
     if not redirect:
         host = request.get_host()
         if host.startswith(API_PREFIX):
             redirect = host[len(API_PREFIX):]
-            if ':' not in host:
+            if add_port and ':' not in host:
                 port = request.get_port()
                 if port and int(port) not in [80, 443]:
                     redirect += f':{port}'
