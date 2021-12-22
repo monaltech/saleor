@@ -2,7 +2,13 @@ from typing import TYPE_CHECKING
 
 from django.conf import settings
 from django.core.handlers.wsgi import WSGIRequest
-from django.http import HttpResponse, HttpResponseNotFound, HttpResponseRedirect
+
+from django.http import (
+    HttpResponse,
+    HttpResponseNotAllowed,
+    HttpResponseNotFound,
+    HttpResponseRedirect
+)
 from django.utils.http import urlencode
 
 from saleor.plugins.base_plugin import BasePlugin, ConfigurationTypeField
@@ -28,6 +34,7 @@ from . import (
 )
 
 from .utils import (
+    build_redirect_url
     #create_order,
     #get_checkout,
     get_payment,
@@ -43,17 +50,24 @@ import json
 GATEWAY_NAME = "CyberSource"        # Plugin name (for backend)
 DISPLAY_NAME = "Credit/Debit Card"  # Display name for frontend
 
-WEBHOOK_RETURN = '/return'          # Return URL
-WEBHOOK_CANCEL = '/cancel'          # Cancel URL
+WEBHOOK_NOTIFY = '/webhooks/notify' # Gateway notify URL.
+WEBHOOK_RETURN = '/webhooks/return' # Gateway return URL.
 
-WEBHOOK_NOTIFY = '/notify'          # Payment notification.
-
-PAYMENT_QS = 'payment=%s'   # Payment response query string.
-
+QUERY_STRING = 'payment'    # Payment response query string.
 STATUS_FIELD = 'decision'   # Payment response status field.
 
+CODE_FIELD = 'reason_code'  # Payment response reason code field.
+TEXT_FIELD = 'message'      # Payment response reason text field.
 
-E_PAYMENT_NOT_FOUND = 'Payment not found for payment_id=%s.'
+# Error mesaage if payment not found for given payment_id:
+PAYMENT_ERROR = 'Payment information not found for ID=%s.'
+
+# Error code and message for silenced exceptions in webhook:
+EXCEPTION_CODE = 10
+EXCEPTION_TEXT = f'Oops! Something went wrong.'
+
+# Cache payment error status val:
+ERROR_STATUS = csapi.Status.ERROR
 
 
 if TYPE_CHECKING:
@@ -282,7 +296,7 @@ class CyberSourceGatewayPlugin(BasePlugin):
         payment_id = payment_information.payment_id
         payment = get_payment(payment_id)
         if not payment:
-            raise PaymentError(E_PAYMENT_NOT_FOUND % payment_id)
+            raise PaymentError(PAYMENT_ERROR % payment_id)
         return payment
 
     def _confirm_payment(self, kind, payment_information, payment=None):
@@ -328,9 +342,9 @@ class CyberSourceGatewayPlugin(BasePlugin):
         )
 
     def _get_default_kind(self):
-        if not self.auto_capture:
-            return TransactionKind.AUTH
-        return TransactionKind.CAPTURE
+        if self.config.auto_capture:
+            return TransactionKind.CAPTURE
+        return TransactionKind.AUTH
 
     @require_active_plugin
     def process_payment(
@@ -339,49 +353,69 @@ class CyberSourceGatewayPlugin(BasePlugin):
         #return process_payment(payment_information, self._get_gateway_config())
         return self._process_payment(payment_information)
 
-    def _webhook_redirect(self, response, result, config=None):
+    def _webhook_redirect(self, request, response, result, config=None):
         if config is None:
             config = self._get_gateway_config()
         status = response.status
         params = config.connection_params
         if status in csapi.Status.RETURN:
-            url = params['return_url'] or '/'
+            url = params.get('return_url') or '/'
         else:
-            url = params['cancel_url'] or '/'
+            url = params.get('cancel_url') or '/'
         if url.startswith('/'):
-            url = request.build_absolute_uri(url)
-        qs = PAYMENT_QS % urlencode(b64encode(json.dumps({
-            'code': response.code,
-            'label': csapi.Status.label(status),
-            'message': response.message,
-            'status': status,
-            **result})))
-        return HttpResponseRedirect(f'{url}?%s' % qs)
+            url = build_redirect_url(request, url)
+        data = json.dumps({
+                'code': response.code,
+                'label': csapi.Status.label(status),
+                'message': response.message,
+                'status': status,
+                **result}).encode()
+        qs = urlencode({
+                QUERY_STRING: b64encode(data).decode()})
+        return HttpResponseRedirect(f'{url}?{qs}')
+
+    @staticmethod
+    def _webhook_error_response(err, result=None):
+        if isinstance(err, PaymentError):
+            return csapi.Response({
+                STATUS_FIELD: ERROR_STATUS,
+                CODE_FIELD: err.code,
+                TEXT_FIELD: err.message,
+            })
+        if result is not None:
+            result['error'] = str(err)
+        return csapi.Response({
+            STATUS_FIELD: ERROR_STATUS,
+            CODE_FIELD: EXCEPTION_CODE,
+            TEXT_FIELD: EXCEPTION_TEXT,
+        })
 
     def webhook(self, request: WSGIRequest, path: str, previous_value) -> HttpResponse:
         notify = path.startswith(WEBHOOK_NOTIFY)
         if notify or path.startswith(WEBHOOK_RETURN):
+            result = {}
             try:
-                data = request.POST.copy()
-                result = {
-                    'refno': data.get(PAYMENT_ID),
-                    'token': data.get(TOKEN_NAME),
-                }
-                #config = self._get_gateway_config()
-                #response = handle_webhook(self, data, config)
-                response = handle_webhook(self, data)
-                if notify:
-                    return HttpResponse('OK')
-                result['order'] = response.get('order_id')
-            except PaymentError as e:
+                if request.method.upper() == 'POST':
+                    data = request.POST.copy()
+                    result['refno'] = data.get(PAYMENT_ID)
+                    result['token'] = data.get(TOKEN_NAME)
+                    #response = handle_webhook(self._cs, data,
+                    #        config=self._get_gateway_config())
+                    response = handle_webhook(self._cs, data)
+                    if notify:
+                        return HttpResponse('OK')
+                    result['order'] = response.get('order_id')
+                else:
+                    if notify:
+                        return HttpResponseNotAllowed(['POST'])
+                    response = csapi.Response({
+                        STATUS_FIELD: csapi.Status.CANCEL,
+                    })
+            except Exception as err:
                 if notify:
                     return HttpResponse('ERROR')
-                response = csapi.Response({
-                    'decision': csapi.Status.ERROR,
-                    'message': e.message,
-                    'reason_code': e.code,
-                })
-            return self._webhook_redirect(response, result)
+                response = self._webhook_error_response(err, result)
+            return self._webhook_redirect(request, response, result)
         return HttpResponseNotFound()
 
     @require_active_plugin

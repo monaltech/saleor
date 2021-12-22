@@ -226,7 +226,7 @@ class Response:
 
 class CyberSourceError(Exception):
 
-    def __init__(*args, code=0):
+    def __init__(self, *args, code=0):
         super().__init__(*args)
         self.code = code
 
@@ -237,13 +237,13 @@ class CyberSourceError(Exception):
 
 class SignatureError(CyberSourceError):
 
-    def __init__(self, code=99):
+    def __init__(self, *args, code=99):
         super().__init__(*args, code=code)
 
 
 class ValidationError(CyberSourceError):
 
-    def __init__(*args, code=50, source=None):
+    def __init__(self, *args, code=50, source=None):
         super().__init__(*args, code=code)
         self.source = source
 
@@ -380,15 +380,15 @@ class CyberSource:
     def validate(self, data):
         try:
             signature = data['signature']
-        except KeyError:
-            raise ValidationError(E_NO_SIGN_FIELD)
+        except KeyError as e:
+            raise ValidationError(E_NO_SIGN_FIELD, source=e)
         if not signature:
             raise ValidationError(E_NO_SIGN_VALUE)
         #TODO: Validate all other required fields.
         if signature != self.sign(data):
             raise SignatureError(E_SIGNATURE)
         return Response(data)
-
+ 
 
 # Generate test html form.
 if __name__ == '__main__':

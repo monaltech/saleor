@@ -24,10 +24,30 @@ CHARGE_STATUS = {
 NO_CREATE_ORDER = 'Order not created for ChargeStatus=%s'
 NO_CHECKOUT_OBJ = 'No Checkout object in Payment object.'
 
+API_PREFIX = 'api.'
+
 
 import logging
 
 _logger = logging.getLogger(__name__)
+
+
+def build_redirect_url(request, url):
+    redirect = request.GET.get('redirect')
+    if not redirect:
+        host = request.get_host()
+        if host.startswith(API_PREFIX):
+            redirect = host[len(API_PREFIX):]
+            if ':' not in host:
+                port = request.get_port()
+                if port and int(port) not in [80, 443]:
+                    redirect += f':{port}'
+    if redirect:
+        if '://' not in redirect:
+            redirect = f'{request.scheme}://{redirect}'
+        #url = f'{redirect}{url}'
+        return f'{redirect}{url}'
+    return request.build_absolute_uri(url)
 
 
 def create_order(payment: Payment, checkout: Checkout, pd=None):
