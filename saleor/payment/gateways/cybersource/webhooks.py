@@ -10,6 +10,8 @@ from ....payment.models import (
 from ...interface import GatewayResponse
 from ... import PaymentError, TransactionKind
 
+from ...gateway import confirm
+
 from ...utils import (
     create_transaction,
     gateway_postprocess,
@@ -32,6 +34,12 @@ from . import (
     is_client_token,
 )
 
+from .utils import (
+    create_order,
+    get_payment,
+    make_searchable,
+)
+
 
 L_NOT_FOUND = "Payment not found for reference_number=%s."
 E_NOT_FOUND = "Payment information not found for Ref# %s."
@@ -47,6 +55,8 @@ E_BAD_SIGN = 'Cannot verify response data sent by Payment Gateway.'
 
 E_PROCESSING = 'Error processing response from Payment Gateway.'
 E_VALIDATION = 'Error validating response from Payment Gateway.'
+
+E_MISSING = 'Missing "%s" in response from the Payment Gateway.'
 
 
 import logging
@@ -115,9 +125,9 @@ class Handler:
             searchable_key = make_searchable(self.token)
             transaction.searchable_key = searchable_key
             to_update.append('searchable_key')
-        if not transaction.raw_response:
-            transaction.raw_response = self.response
-            to_update.append('raw_response')
+        if not transaction.gateway_response:
+            transaction.gateway_response = self.response.data
+            to_update.append('gateway_response')
         if to_update:
             transaction.save(update_fields=to_update)
         return len(to_update)
@@ -147,12 +157,12 @@ class Handler:
         _logger.warning(L_CHECKOUT % self.token)
         raise HandlerError(E_CHECKOUT)
 
-    def process(capture=False):
+    def process(self, capture=False):
         transaction = self._process_transaction(
                 kind=TransactionKind.ACTION_TO_CONFIRM,
                 action_required=True)
         payment, response = self.payment, self.response
-        transaction = gateway.confirm(payment, response)
+        transaction = confirm(payment, response.data)
         if payment.token != transaction.token \
                 and not is_client_token(payment.token) \
                 and is_client_token(transaction.token):
@@ -177,6 +187,10 @@ def _confirm_payment(handler, auto_capture):
     return order
 
 def _validate_payment(cs, data):
+    for i in [PAYMENT_ID, TOKEN_NAME]:
+        if not data.get(i):
+            _logger.warning('validate_payment: %s', E_MISSING % i)
+            raise PaymentError(E_MISSING % i)
     try:
         response = cs.validate(data)
         _logger.info('validate_payment: %s', str(response))
@@ -192,7 +206,7 @@ def _validate_payment(cs, data):
 def handle_webhook(cs, data, *args, **kwargs):
     response = _validate_payment(cs, data)
     if response.status in Status.RETURN:
-        payment = get_payment(response[PAYMENT_ID])
+        payment = get_payment(response.get(PAYMENT_ID))
         if not payment:
             _logger.warning(L_NOT_FOUND, payment_id)
             e = E_NOT_FOUND % payment_id

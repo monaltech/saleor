@@ -24,7 +24,21 @@ CHARGE_STATUS = {
 NO_CREATE_ORDER = 'Order not created for ChargeStatus=%s'
 NO_CHECKOUT_OBJ = 'No Checkout object in Payment object.'
 
-API_PREFIX = 'api.'
+PREFIXES = ['api.', 'mgapi.']
+
+ADDRESS_MAP = {
+    'first_name': 'bill_to_forename',
+    'last_name': 'bill_to_surname',
+    #'company_name': '',
+    'street_address_1': 'bill_to_address_line1',
+    'street_address_2': 'bill_to_address_line2',
+    'city': 'bill_to_address_city',
+    #'city_area': '',
+    'postal_code': 'bill_to_address_postal_code',
+    'country': 'bill_to_address_country',
+    #'country_area': '',
+    'phone': 'bill_to_phone',
+}
 
 
 import logging
@@ -32,16 +46,30 @@ import logging
 _logger = logging.getLogger(__name__)
 
 
+def map_address(address, email=None):
+    addr = {i: getattr(address, i, None) for i in ADDRESS_MAP}
+    data = {ADDRESS_MAP[k]: v for k, v in addr.items() if v is not None}
+    state = getattr(address, 'country_area', None) \
+            or getattr(address, 'city_area', None)
+    if state is not None:
+        data['bill_to_address_state'] = state
+    if email is not None:
+        data['bill_to_email'] = email
+    return data
+
+
 def build_redirect_url(request, url, add_port=False):
     redirect = request.GET.get('redirect')
     if not redirect:
         host = request.get_host()
-        if host.startswith(API_PREFIX):
-            redirect = host[len(API_PREFIX):]
-            if add_port and ':' not in host:
-                port = request.get_port()
-                if port and int(port) not in [80, 443]:
-                    redirect += f':{port}'
+        for prefix in PREFIXES:
+            if host.startswith(prefix):
+                redirect = host[len(prefix):]
+                break
+        if add_port and ':' not in host:
+            port = request.get_port()
+            if port and int(port) not in [80, 443]:
+                redirect += f':{port}'
     if redirect:
         if '://' not in redirect:
             redirect = f'{request.scheme}://{redirect}'

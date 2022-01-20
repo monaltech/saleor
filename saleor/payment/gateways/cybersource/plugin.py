@@ -39,6 +39,7 @@ from .utils import (
     #get_checkout,
     get_payment,
     make_searchable,
+    map_address,
 )
 
 from .webhooks import handle_webhook
@@ -250,6 +251,10 @@ class CyberSourceGatewayPlugin(BasePlugin):
             #'reference_number': payment_information.graphql_payment_id,
             #'transaction_uuid': token.replace('-', ''),
             'transaction_uuid': token,
+            **map_address(payment_information.billing,
+                    payment_information.customer_email)
+            #**map_address(payment_information.shipping,
+            #        payment_information.customer_email)
         }
         return {
             'action': self._cs.endpoint,

@@ -52,6 +52,12 @@ TS_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 REQUIRED_FIELDS = {
     'access_key',
     'amount',
+    'bill_to_address_country',
+    'bill_to_address_city',
+    'bill_to_address_line1',
+    'bill_to_email',
+    'bill_to_forename',
+    'bill_to_surname',
     'currency',
     'locale',
     'profile_id',
@@ -66,16 +72,10 @@ REQUIRED_FIELDS = {
 
 SIGNED_FIELDS = {
     *REQUIRED_FIELDS,
-    'bill_to_forename',
-    'bill_to_surname',
-    'bill_to_phone',
-    'bill_to_email',
-    'bill_to_address_line1',
     'bill_to_address_line2',
-    'bill_to_address_city',
     'bill_to_address_postal_code',
     'bill_to_address_state',
-    'bill_to_address_country',
+    'bill_to_phone',
     'merchant_id',
     'payment_method',
 }
@@ -186,6 +186,9 @@ class Response:
         c = self.__class__.__name__
         e = f"'{c}' object has no attribute '{name}'"
         raise AttributeError(e)
+
+    def __getitem__(self, key):
+        return self._data[key]
 
     def __str__(self):
         return f'{self._text} ({self._code}) {self.message}'
