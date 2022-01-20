@@ -4180,6 +4180,7 @@ type ProductVariantCreate {
 input ProductVariantCreateInput {
   attributes: [AttributeValueInput]!
   costPrice: PositiveDecimal
+  wholeSalePrice: PositiveDecimal
   price: PositiveDecimal
   sku: String
   trackInventory: Boolean
@@ -4202,6 +4203,7 @@ input ProductVariantFilterInput {
 input ProductVariantInput {
   attributes: [AttributeValueInput]
   costPrice: PositiveDecimal
+  wholeSalePrice: PositiveDecimal
   price: PositiveDecimal
   sku: String
   trackInventory: Boolean

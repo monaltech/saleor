@@ -34,6 +34,7 @@ from ..discount import DiscountInfo
 from ..discount.utils import calculate_discounted_price
 from ..seo.models import SeoModel, SeoModelTranslation
 from . import AttributeInputType
+from .. import settings
 
 if TYPE_CHECKING:
     # flake8: noqa

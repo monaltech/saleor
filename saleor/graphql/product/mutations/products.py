@@ -555,6 +555,12 @@ class ProductInput(graphene.InputObjectType):
             "Note: this field is only used if a product doesn't use variants."
         )
     )
+    whole_sale_price = PositiveDecimal(
+        description=(
+            "Wholesale price for product variant. "
+            "Note: this field is only used if a product doesn't use variants."
+        )
+    )
     visible_in_listings = graphene.Boolean(
         description=(
             "Determines if product is visible in product listings "
@@ -859,6 +865,13 @@ class ProductCreate(ModelMutation):
         except ValidationError as error:
             error.code = ProductErrorCode.INVALID.value
             raise ValidationError({"base_price": error})
+        
+        whole_sale_price = cleaned_input.get("whole_sale_price")
+        try:
+            validate_price_precision(whole_sale_price, instance.currency)
+        except ValidationError as error:
+            error.code = ProductErrorCode.INVALID.value
+            raise ValidationError({"whole_sale_price": error})
 
         # Attributes are provided as list of `AttributeValueInput` objects.
         # We need to transform them into the format they're stored in the
@@ -987,12 +1000,13 @@ class ProductCreate(ModelMutation):
             )
             sku = cleaned_input.get("sku")
             variant_price = cleaned_input.get("base_price")
-
+            variant_wholesale_price = cleaned_input.get("whole_sale_price")
             variant = models.ProductVariant.objects.create(
                 product=instance,
                 track_inventory=track_inventory,
                 sku=sku,
                 price_amount=variant_price,
+                whole_sale_price_amount=variant_wholesale_price,
             )
             stocks = cleaned_input.get("stocks")
             if stocks:
