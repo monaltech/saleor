@@ -329,6 +329,11 @@ class ProductVariant(CountableDjangoObjectType):
     @permission_required(ProductPermissions.MANAGE_PRODUCTS)
     def resolve_cost_price(root: models.ProductVariant, *_args):
         return root.cost_price
+    
+    @staticmethod
+    @permission_required(ProductPermissions.MANAGE_PRODUCTS)
+    def resolve_whole_sale_price(root: models.ProductVariant, *_args):
+        return root.whole_sale_price
 
     @staticmethod
     @permission_required(ProductPermissions.MANAGE_PRODUCTS)
