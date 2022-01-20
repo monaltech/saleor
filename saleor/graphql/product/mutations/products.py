@@ -1084,6 +1084,9 @@ class ProductUpdate(ProductCreate):
             if "base_price" in cleaned_input:
                 variant.price_amount = cleaned_input["base_price"]
                 update_fields.append("price_amount")
+            if "whole_sale_price" in cleaned_input:
+                variant.whole_sale_price_amount = cleaned_input["whole_sale_price"]
+                update_fields.append("whole_sale_price_amount")
             if update_fields:
                 variant.save(update_fields=update_fields)
         # Recalculate the "minimal variant price"
