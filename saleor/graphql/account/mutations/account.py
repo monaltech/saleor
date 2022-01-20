@@ -113,6 +113,7 @@ class AccountInput(graphene.InputObjectType):
     first_name = graphene.String(description="Given name.")
     last_name = graphene.String(description="Family name.")
     phone_number = graphene.String(description="Contact Number of customer.")
+    is_wholesaler = graphene.String(description="Wholesale customer.")
     default_billing_address = AddressInput(
         description="Billing address of the customer."
     )
@@ -143,6 +144,8 @@ class AccountUpdate(BaseCustomerCreate):
     def perform_mutation(cls, root, info, **data):
         user = info.context.user
         data["id"] = graphene.Node.to_global_id("User", user.id)
+        wholesaler = False
+        # has_bought_premium_product = 
         return super().perform_mutation(root, info, **data)
 
 
