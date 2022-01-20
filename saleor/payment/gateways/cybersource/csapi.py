@@ -152,6 +152,10 @@ class Status:
     CONFIRM = RETURN
     SUCCESS = RETURN
 
+    CAPTURE = {
+        ACCEPT,
+    }
+
     FAILED = {
         CANCEL,
         DECLINE,

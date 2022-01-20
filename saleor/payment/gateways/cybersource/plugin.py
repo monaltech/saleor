@@ -315,7 +315,7 @@ class CyberSourceGatewayPlugin(BasePlugin):
                     TransactionKind.CAPTURE,
                     TransactionKind.CONFIRM,
                 }:
-                    if status == csapi.Status.CAPTURE:
+                    if status in csapi.Status.CAPTURE:
                         return TransactionKind.CAPTURE
                     #if status == csapi.Status.REVIEW:
                     #    return TransactionKind.AUTH
